@@ -9,60 +9,21 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
-    <Filter Include="kcrt">
-      <UniqueIdentifier>{bddac5e9-2a84-418c-932b-bb5d695a9641}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="kstl">
-      <UniqueIdentifier>{2bc1091d-89a4-42f3-8809-b1a3cefbebc0}</UniqueIdentifier>
+    <Filter Include="path">
+      <UniqueIdentifier>{10f7425e-f8e9-4f34-b5e2-4bd4d668cafa}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="kcrt\kcrtc.c">
-      <Filter>kcrt</Filter>
-    </ClCompile>
-    <ClCompile Include="kcrt\kcrtcc.cpp">
-      <Filter>kcrt</Filter>
-    </ClCompile>
-    <ClCompile Include="kstl\source\allocator_eastl.cpp">
-      <Filter>kstl</Filter>
-    </ClCompile>
-    <ClCompile Include="kstl\source\assert.cpp">
-      <Filter>kstl</Filter>
-    </ClCompile>
-    <ClCompile Include="kstl\source\fixed_pool.cpp">
-      <Filter>kstl</Filter>
-    </ClCompile>
-    <ClCompile Include="kstl\source\hashtable.cpp">
-      <Filter>kstl</Filter>
-    </ClCompile>
-    <ClCompile Include="kstl\source\intrusive_list.cpp">
-      <Filter>kstl</Filter>
-    </ClCompile>
-    <ClCompile Include="kstl\source\numeric_limits.cpp">
-      <Filter>kstl</Filter>
-    </ClCompile>
-    <ClCompile Include="kstl\source\red_black_tree.cpp">
-      <Filter>kstl</Filter>
-    </ClCompile>
-    <ClCompile Include="kstl\source\string.cpp">
-      <Filter>kstl</Filter>
-    </ClCompile>
-    <ClCompile Include="kstl\source\thread_support.cpp">
-      <Filter>kstl</Filter>
-    </ClCompile>
-    <ClCompile Include="kcrt\err.c">
-      <Filter>kcrt</Filter>
-    </ClCompile>
-    <ClCompile Include="kcrt\strtod.c">
-      <Filter>kcrt</Filter>
+    <ClCompile Include="path.cpp">
+      <Filter>path</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="kcrt\kcrt.h">
-      <Filter>kcrt</Filter>
+    <ClInclude Include="path.hpp">
+      <Filter>path</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

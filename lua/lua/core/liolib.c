@@ -1,5 +1,5 @@
 /*
-** $Id: liolib.c,v 2.151 2016/12/20 18:37:00 roberto Exp $
+** $Id: liolib.c,v 2.151.1.1 2017/04/19 17:29:57 roberto Exp $
 ** Standard I/O (and system) library
 ** See Copyright Notice in lua.h
 */
@@ -87,7 +87,7 @@ static int l_checkmode (const char *mode) {
 #define l_lockfile(f)		flockfile(f)
 #define l_unlockfile(f)		funlockfile(f)
 #else
-#define l_getc(f)		getc(f)
+#define l_getc(f)		fgetc(f)
 #define l_lockfile(f)		((void)0)
 #define l_unlockfile(f)		((void)0)
 #endif
@@ -135,8 +135,10 @@ static int l_checkmode (const char *mode) {
 
 #define IO_PREFIX	"_IO_"
 #define IOPREF_LEN	(sizeof(IO_PREFIX)/sizeof(char) - 1)
+#ifndef WINDDK
 #define IO_INPUT	(IO_PREFIX "input")
 #define IO_OUTPUT	(IO_PREFIX "output")
+#endif // WINDDK
 
 
 typedef luaL_Stream LStream;
@@ -206,12 +208,19 @@ static int aux_close (lua_State *L) {
 }
 
 
-static int io_close (lua_State *L) {
-  if (lua_isnone(L, 1))  /* no argument? */
-    lua_getfield(L, LUA_REGISTRYINDEX, IO_OUTPUT);  /* use standard output */
+static int f_close (lua_State *L) {
   tofile(L);  /* make sure argument is an open stream */
   return aux_close(L);
 }
+
+
+#ifndef WINDDK
+static int io_close (lua_State *L) {
+  if (lua_isnone(L, 1))  /* no argument? */
+    lua_getfield(L, LUA_REGISTRYINDEX, IO_OUTPUT);  /* use standard output */
+  return f_close(L);
+}
+#endif // WINDDK
 
 
 static int f_gc (lua_State *L) {
@@ -259,6 +268,7 @@ static int io_open (lua_State *L) {
 }
 
 
+#ifndef WINDDK
 /*
 ** function to close 'popen' files
 */
@@ -276,13 +286,16 @@ static int io_popen (lua_State *L) {
   p->closef = &io_pclose;
   return (p->f == NULL) ? luaL_fileresult(L, 0, filename) : 1;
 }
+#endif // WINDDK
 
 
+#ifndef WINDDK
 static int io_tmpfile (lua_State *L) {
   LStream *p = newfile(L);
   p->f = tmpfile();
   return (p->f == NULL) ? luaL_fileresult(L, 0, NULL) : 1;
 }
+#endif // WINDDK
 
 
 static FILE *getiofile (lua_State *L, const char *findex) {
@@ -312,6 +325,7 @@ static int g_iofile (lua_State *L, const char *f, const char *mode) {
 }
 
 
+#ifndef WINDDK
 static int io_input (lua_State *L) {
   return g_iofile(L, IO_INPUT, "r");
 }
@@ -320,6 +334,7 @@ static int io_input (lua_State *L) {
 static int io_output (lua_State *L) {
   return g_iofile(L, IO_OUTPUT, "w");
 }
+#endif // WINDDK
 
 
 static int io_readline (lua_State *L);
@@ -348,6 +363,7 @@ static int f_lines (lua_State *L) {
 }
 
 
+#ifndef WINDDK
 static int io_lines (lua_State *L) {
   int toclose;
   if (lua_isnone(L, 1)) lua_pushnil(L);  /* at least one argument */
@@ -366,6 +382,7 @@ static int io_lines (lua_State *L) {
   aux_lines(L, toclose);
   return 1;
 }
+#endif // WINDDK
 
 
 /*
@@ -467,7 +484,7 @@ static int read_number (lua_State *L, FILE *f) {
 
 
 static int test_eof (lua_State *L, FILE *f) {
-  int c = getc(f);
+  int c = l_getc(f);
   ungetc(c, f);  /* no-op when c == EOF */
   lua_pushliteral(L, "");
   return (c != EOF);
@@ -571,9 +588,11 @@ static int g_read (lua_State *L, FILE *f, int first) {
 }
 
 
+#ifndef WINDDK
 static int io_read (lua_State *L) {
   return g_read(L, getiofile(L, IO_INPUT), 1);
 }
+#endif // WINDDK
 
 
 static int f_read (lua_State *L) {
@@ -618,11 +637,30 @@ static int g_write (lua_State *L, FILE *f, int arg) {
   for (; nargs--; arg++) {
     if (lua_type(L, arg) == LUA_TNUMBER) {
       /* optimization: could be done exactly as for strings */
+#ifdef WINDDK
+		size_t len = 0;
+		char numstr[64];
+
+		if (lua_isinteger(L, arg))
+		{
+			len = l_sprintf(numstr, 64, LUA_INTEGER_FMT, (LUAI_UACINT)lua_tointeger(L, arg));
+		}
+		else
+		{
+			len = l_sprintf(numstr, 64, LUA_NUMBER_FMT, (LUAI_UACNUMBER)lua_tonumber(L, arg));
+		}
+
+		if (len > 0)
+		{
+			len = fwrite(numstr, sizeof(char), len, f);
+		}
+#else
       int len = lua_isinteger(L, arg)
                 ? fprintf(f, LUA_INTEGER_FMT,
                              (LUAI_UACINT)lua_tointeger(L, arg))
                 : fprintf(f, LUA_NUMBER_FMT,
                              (LUAI_UACNUMBER)lua_tonumber(L, arg));
+#endif // WINDDK
       status = status && (len > 0);
     }
     else {
@@ -636,9 +674,11 @@ static int g_write (lua_State *L, FILE *f, int arg) {
 }
 
 
+#ifndef WINDDK
 static int io_write (lua_State *L) {
   return g_write(L, getiofile(L, IO_OUTPUT), 1);
 }
+#endif // WINDDK
 
 
 static int f_write (lua_State *L) {
@@ -667,6 +707,7 @@ static int f_seek (lua_State *L) {
 }
 
 
+#ifndef WINDDK
 static int f_setvbuf (lua_State *L) {
   static const int mode[] = {_IONBF, _IOFBF, _IOLBF};
   static const char *const modenames[] = {"no", "full", "line", NULL};
@@ -676,9 +717,11 @@ static int f_setvbuf (lua_State *L) {
   int res = setvbuf(f, NULL, mode[op], (size_t)sz);
   return luaL_fileresult(L, res == 0, NULL);
 }
+#endif // WINDDK
 
 
 
+#ifndef WINDDK
 static int io_flush (lua_State *L) {
   return luaL_fileresult(L, fflush(getiofile(L, IO_OUTPUT)) == 0, NULL);
 }
@@ -687,23 +730,30 @@ static int io_flush (lua_State *L) {
 static int f_flush (lua_State *L) {
   return luaL_fileresult(L, fflush(tofile(L)) == 0, NULL);
 }
+#endif // WINDDK
 
 
 /*
 ** functions for 'io' library
 */
 static const luaL_Reg iolib[] = {
+#ifndef WINDDK
   {"close", io_close},
   {"flush", io_flush},
   {"input", io_input},
   {"lines", io_lines},
+#endif // WINDDK
   {"open", io_open},
+#ifndef WINDDK
   {"output", io_output},
   {"popen", io_popen},
   {"read", io_read},
   {"tmpfile", io_tmpfile},
+#endif // WINDDK
   {"type", io_type},
+#ifndef WINDDK
   {"write", io_write},
+#endif // WINDDK
   {NULL, NULL}
 };
 
@@ -712,12 +762,16 @@ static const luaL_Reg iolib[] = {
 ** methods for file handles
 */
 static const luaL_Reg flib[] = {
-  {"close", io_close},
+  {"close", f_close},
+#ifndef WINDDK
   {"flush", f_flush},
+#endif // WINDDK
   {"lines", f_lines},
   {"read", f_read},
   {"seek", f_seek},
+#ifndef WINDDK
   {"setvbuf", f_setvbuf},
+#endif // WINDDK
   {"write", f_write},
   {"__gc", f_gc},
   {"__tostring", f_tostring},
@@ -762,10 +816,12 @@ static void createstdfile (lua_State *L, FILE *f, const char *k,
 LUAMOD_API int luaopen_io (lua_State *L) {
   luaL_newlib(L, iolib);  /* new module */
   createmeta(L);
+#ifndef WINDDK
   /* create (and set) default files */
   createstdfile(L, stdin, IO_INPUT, "stdin");
   createstdfile(L, stdout, IO_OUTPUT, "stdout");
   createstdfile(L, stderr, NULL, "stderr");
+#endif // WINDDK
   return 1;
 }
 
